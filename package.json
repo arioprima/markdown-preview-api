@@ -1,0 +1,38 @@
+{
+  "name": "markdown-preview-api",
+  "version": "1.0.0",
+  "description": "Backend for Markdown Preview App",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate dev",
+    "prisma:studio": "npx prisma studio",
+    "prisma:reset": "npx prisma migrate reset"
+  },
+  "keywords": [
+    "express",
+    "prisma",
+    "markdown",
+    "postgresql"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.0.1",
+    "@prisma/client": "^7.0.1",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.3",
+    "prisma": "^7.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "nodemon": "^3.1.11"
+  }
+}

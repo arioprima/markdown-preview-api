@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id         String    @id @default(uuid())
+  email      String    @unique
+  username   String    @unique
+  password   String
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  files MarkdownFile[]
+
+  @@map("users")
+}
+
+model MarkdownFile {
+  id         String    @id @default(uuid())
+  title      String
+  content    String    @db.Text
+  user_id    String
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("markdown_files")
+}
