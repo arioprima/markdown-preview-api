@@ -33,3 +33,6 @@ build/
 # Testing
 coverage/
 .nyc_output/
+
+/postman
+/docs

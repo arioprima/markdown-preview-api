@@ -11,8 +11,19 @@ export const prisma = new PrismaClient({
     log: env.isDevelopment ? ['query', 'info', 'warn', 'error'] : ['warn', 'error'],
 });
 
+const CONNECTION_TIMEOUT = 10000;
+
 export async function connectDB() {
-    await prisma.$connect();
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Database connection timeout")), CONNECTION_TIMEOUT);
+    });
+
+    const connectPromise = (async () => {
+        await prisma.$connect();
+        await prisma.$queryRaw`SELECT 1`;
+    })();
+
+    await Promise.race([connectPromise, timeoutPromise]);
     console.log("Database connected");
 }
 

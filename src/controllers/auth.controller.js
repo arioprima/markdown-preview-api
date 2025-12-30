@@ -1,37 +1,20 @@
 import * as authService from "../services/auth.service.js";
 
-/**
- * ===========================================
- * AUTH CONTROLLER
- * ===========================================
- * Handle HTTP request/response untuk authentication.
- * Controller HANYA handle:
- * - Parse request (body, params, query)
- * - Call service
- * - Format response
- * - Error handling
- */
-
-/**
- * POST /api/auth/register
- * Register user baru
- */
 export const register = async (req, res, next) => {
     try {
         const { email, username, password } = req.body;
 
-        // Validasi input
         if (!email || !username || !password) {
             return res.status(400).json({
                 success: false,
-                message: "Email, username, dan password wajib diisi"
+                message: "Email, username, and password are required"
             });
         }
 
         if (password.length < 6) {
             return res.status(400).json({
                 success: false,
-                message: "Password minimal 6 karakter"
+                message: "Password must be at least 6 characters long"
             });
         }
 
@@ -39,7 +22,7 @@ export const register = async (req, res, next) => {
 
         res.status(201).json({
             success: true,
-            message: "Register berhasil",
+            message: "Registration successful",
             data: result
         });
     } catch (error) {
@@ -47,19 +30,14 @@ export const register = async (req, res, next) => {
     }
 };
 
-/**
- * POST /api/auth/login
- * Login user
- */
 export const login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
 
-        // Validasi input
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
-                message: "Email dan password wajib diisi"
+                message: "Email and password are required"
             });
         }
 
@@ -67,7 +45,7 @@ export const login = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            message: "Login berhasil",
+            message: "Login successful",
             data: result
         });
     } catch (error) {
@@ -75,13 +53,9 @@ export const login = async (req, res, next) => {
     }
 };
 
-/**
- * GET /api/auth/profile
- * Get current user profile
- */
 export const getProfile = async (req, res, next) => {
     try {
-        const userId = req.user.userId; // Dari auth middleware
+        const userId = req.user.userId;
 
         const user = await authService.getProfile(userId);
 
@@ -94,10 +68,6 @@ export const getProfile = async (req, res, next) => {
     }
 };
 
-/**
- * PUT /api/auth/profile
- * Update user profile
- */
 export const updateProfile = async (req, res, next) => {
     try {
         const userId = req.user.userId;
@@ -107,7 +77,7 @@ export const updateProfile = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            message: "Profile berhasil diupdate",
+            message: "Profile updated successfully",
             data: user
         });
     } catch (error) {
@@ -115,33 +85,29 @@ export const updateProfile = async (req, res, next) => {
     }
 };
 
-/**
- * PUT /api/auth/change-password
- * Change user password
- */
 export const changePassword = async (req, res, next) => {
     try {
         const userId = req.user.userId;
-        const { currentPassword, newPassword } = req.body;
+        console.log("userId:", userId);
+        const { current_password, new_password } = req.body;
 
-        // Validasi input
-        if (!currentPassword || !newPassword) {
+        if (!current_password || !new_password) {
             return res.status(400).json({
                 success: false,
-                message: "Password saat ini dan password baru wajib diisi"
+                message: "Current password and new password are required"
             });
         }
 
-        if (newPassword.length < 6) {
+        if (new_password.length < 6) {
             return res.status(400).json({
                 success: false,
-                message: "Password baru minimal 6 karakter"
+                message: "New password must be at least 6 characters long"
             });
         }
 
         const result = await authService.changePassword(userId, {
-            currentPassword,
-            newPassword
+            current_password,
+            new_password
         });
 
         res.status(200).json({
@@ -153,10 +119,6 @@ export const changePassword = async (req, res, next) => {
     }
 };
 
-/**
- * DELETE /api/auth/account
- * Delete user account (soft delete)
- */
 export const deleteAccount = async (req, res, next) => {
     try {
         const userId = req.user.userId;
