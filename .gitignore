@@ -33,3 +33,7 @@ build/
 # Testing
 coverage/
 .nyc_output/
+
+/postman
+# ignore ssemua folder docs dan isinya
+/docs

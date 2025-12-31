@@ -1,189 +1,99 @@
 import { prisma } from "../config/database.js";
+import { parsePaginationOptions, paginatedResponse } from "../utils/pagination.util.js";
 
-/**
- * ===========================================
- * MARKDOWN FILE REPOSITORY
- * ===========================================
- * Layer untuk akses data MarkdownFile ke database.
- * Semua query database untuk tabel `markdown_files` ada di sini.
- */
-
-// ============================================
-// HELPER: Filter untuk soft delete
-// ============================================
 const notDeleted = { deleted_at: null };
 
+const isDeleted = { deleted_at: { not: null } };
 
-// ============================================
-// READ OPERATIONS
-// ============================================
-
-/**
- * Cari markdown file berdasarkan ID
- * 
- * SQL Equivalent:
- * SELECT * FROM markdown_files 
- * WHERE id = 'xxx' AND deleted_at IS NULL 
- * LIMIT 1;
- * 
- * @param {string} id
- * @returns {Promise<MarkdownFile|null>}
- */
-export const findById = async (id) => {
-    return prisma.markdownFile.findFirst({
-        where: { id, ...notDeleted }
-    });
-};
-
-/**
- * Cari markdown file berdasarkan ID + user_id (untuk validasi ownership)
- * 
- * SQL Equivalent:
- * SELECT * FROM markdown_files 
- * WHERE id = 'xxx' AND user_id = 'yyy' AND deleted_at IS NULL 
- * LIMIT 1;
- * 
- * @param {string} id
- * @param {string} userId
- * @returns {Promise<MarkdownFile|null>}
- */
-export const findByIdAndUserId = async (id, userId) => {
+export const findById = async (id, userId) => {
     return prisma.markdownFile.findFirst({
         where: { id, user_id: userId, ...notDeleted }
     });
 };
 
-/**
- * Cari satu file dengan kondisi fleksibel
- * 
- * @param {object} where - Kondisi pencarian
- * @param {object} options
- * @param {boolean} options.includeDeleted - Sertakan yang sudah dihapus?
- * @param {boolean} options.includeUser - Sertakan data user?
- */
-export const findOne = async (where, options = {}) => {
-    const { includeDeleted = false, includeUser = false } = options;
-
+export const findByIdWithUser = async (id, userId) => {
     return prisma.markdownFile.findFirst({
-        where: {
-            ...where,
-            ...(includeDeleted ? {} : notDeleted)
-        },
-        include: includeUser ? { user: true } : undefined
+        where: { id, user_id: userId, ...notDeleted },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    email: true,
+                    username: true
+                }
+            }
+        }
     });
 };
 
-/**
- * Ambil semua file milik user dengan pagination
- * 
- * SQL Equivalent:
- * SELECT * FROM markdown_files 
- * WHERE user_id = 'xxx' AND deleted_at IS NULL
- * ORDER BY created_at DESC
- * LIMIT 10 OFFSET 0;
- * 
- * @param {string} userId
- * @param {object} options
- * @param {number} options.page - Halaman (default: 1)
- * @param {number} options.limit - Jumlah per halaman (default: 10)
- * @param {string} options.orderBy - Field untuk sorting (default: 'created_at')
- * @param {string} options.order - 'asc' atau 'desc' (default: 'desc')
- */
 export const findManyByUserId = async (userId, options = {}) => {
-    const {
-        page = 1,
-        limit = 10,
-        orderBy = 'created_at',
-        order = 'desc'
-    } = options;
+    const { page, limit, skip, orderBy, order } = parsePaginationOptions(options);
 
-    const skip = (page - 1) * limit;
-
-    const [data, total] = await Promise.all([
-        prisma.markdownFile.findMany({
-            where: { user_id: userId, ...notDeleted },
-            orderBy: { [orderBy]: order },
-            take: limit,
-            skip: skip
-        }),
-        prisma.markdownFile.count({
-            where: { user_id: userId, ...notDeleted }
-        })
-    ]);
-
-    return {
-        data,
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit)
-        }
-    };
-};
-
-/**
- * Search file by title
- * 
- * SQL Equivalent:
- * SELECT * FROM markdown_files 
- * WHERE user_id = 'xxx' 
- *   AND title ILIKE '%keyword%'
- *   AND deleted_at IS NULL
- * ORDER BY created_at DESC;
- * 
- * @param {string} userId
- * @param {string} keyword
- */
-export const searchByTitle = async (userId, keyword, options = {}) => {
-    const { page = 1, limit = 10 } = options;
-    const skip = (page - 1) * limit;
-
-    const where = {
-        user_id: userId,
-        title: { contains: keyword, mode: 'insensitive' },
-        ...notDeleted
-    };
+    const where = { user_id: userId, ...notDeleted };
 
     const [data, total] = await Promise.all([
         prisma.markdownFile.findMany({
             where,
-            orderBy: { created_at: 'desc' },
+            orderBy: { [orderBy]: order },
             take: limit,
             skip
         }),
         prisma.markdownFile.count({ where })
     ]);
 
-    return {
-        data,
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit)
-        }
-    };
+    return paginatedResponse(data, total, { page, limit });
 };
 
+export const search = async (userId, keyword, options = {}) => {
+    const { page, limit, skip } = parsePaginationOptions(options);
 
-// ============================================
-// CREATE OPERATION
-// ============================================
+    const where = {
+        user_id: userId,
+        ...notDeleted,
+        OR: [
+            { title: { contains: keyword, mode: 'insensitive' } },
+            { content: { contains: keyword, mode: 'insensitive' } }
+        ]
+    };
 
-/**
- * Buat markdown file baru
- * 
- * SQL Equivalent:
- * INSERT INTO markdown_files (id, title, content, user_id, created_at, updated_at)
- * VALUES (uuid(), 'Title', 'Content', 'user-id', NOW(), NOW())
- * RETURNING *;
- * 
- * @param {object} data
- * @param {string} data.title
- * @param {string} data.content
- * @param {string} data.user_id
- */
+    const [data, total] = await Promise.all([
+        prisma.markdownFile.findMany({
+            where,
+            orderBy: { updated_at: 'desc' },
+            take: limit,
+            skip
+        }),
+        prisma.markdownFile.count({ where })
+    ]);
+
+    return paginatedResponse(data, total, { page, limit });
+};
+
+export const getRecentByUserId = async (userId, limit = 10) => {
+    return prisma.markdownFile.findMany({
+        where: { user_id: userId, ...notDeleted },
+        orderBy: { updated_at: 'desc' },
+        take: limit,
+        select: {
+            id: true,
+            title: true,
+            updated_at: true
+        }
+    });
+};
+
+export const existsByTitle = async (title, userId, excludeId = null) => {
+    const where = {
+        title,
+        user_id: userId,
+        ...notDeleted,
+        ...(excludeId && { id: { not: excludeId } })
+    };
+
+    const count = await prisma.markdownFile.count({ where });
+    return count > 0;
+};
+
 export const create = async (data) => {
     return prisma.markdownFile.create({
         data: {
@@ -194,23 +104,6 @@ export const create = async (data) => {
     });
 };
 
-
-// ============================================
-// UPDATE OPERATIONS
-// ============================================
-
-/**
- * Update markdown file
- * 
- * SQL Equivalent:
- * UPDATE markdown_files 
- * SET title = 'New Title', content = 'New Content', updated_at = NOW()
- * WHERE id = 'xxx'
- * RETURNING *;
- * 
- * @param {string} id
- * @param {object} data - { title?, content? }
- */
 export const update = async (id, data) => {
     return prisma.markdownFile.update({
         where: { id },
@@ -218,17 +111,6 @@ export const update = async (id, data) => {
     });
 };
 
-/**
- * Soft delete markdown file
- * 
- * SQL Equivalent:
- * UPDATE markdown_files 
- * SET deleted_at = NOW(), updated_at = NOW()
- * WHERE id = 'xxx'
- * RETURNING *;
- * 
- * @param {string} id
- */
 export const softDelete = async (id) => {
     return prisma.markdownFile.update({
         where: { id },
@@ -236,59 +118,102 @@ export const softDelete = async (id) => {
     });
 };
 
-/**
- * Restore markdown file yang sudah di-soft delete
- * 
- * @param {string} id
- */
-export const restore = async (id) => {
+export const softDeleteAllByUserId = async (userId) => {
+    return prisma.markdownFile.updateMany({
+        where: { user_id: userId, ...notDeleted },
+        data: { deleted_at: new Date() }
+    });
+};
+
+export const bulkSoftDelete = async (ids, userId) => {
+    return prisma.markdownFile.updateMany({
+        where: {
+            id: { in: ids },
+            user_id: userId,
+            ...notDeleted
+        },
+        data: { deleted_at: new Date() }
+    });
+};
+
+export const hardDeleteAllByUserId = async (userId, confirmation = false) => {
+    if (!confirmation) {
+        throw new Error('Confirmation required for hard delete all files');
+    }
+
+    return prisma.markdownFile.deleteMany({
+        where: { user_id: userId }
+    });
+};
+
+export const countByUserId = async (userId) => {
+    return prisma.markdownFile.count({
+        where: { user_id: userId, ...notDeleted }
+    });
+};
+
+export const findDeletedById = async (id, userId) => {
+    return prisma.markdownFile.findFirst({
+        where: { id, user_id: userId, ...isDeleted }
+    });
+};
+
+export const findDeletedByUserId = async (userId, options = {}) => {
+    const { page, limit, skip } = parsePaginationOptions(options);
+
+    const where = { user_id: userId, ...isDeleted };
+
+    const [data, total] = await Promise.all([
+        prisma.markdownFile.findMany({
+            where,
+            orderBy: { deleted_at: 'desc' },
+            take: limit,
+            skip
+        }),
+        prisma.markdownFile.count({ where })
+    ]);
+
+    return paginatedResponse(data, total, { page, limit });
+};
+
+export const countDeletedByUserId = async (userId) => {
+    return prisma.markdownFile.count({
+        where: { user_id: userId, ...isDeleted }
+    });
+};
+
+export const restoreById = async (id, userId) => {
+    // First check if file exists and belongs to user
+    const file = await findDeletedById(id, userId);
+    if (!file) return null;
+
     return prisma.markdownFile.update({
         where: { id },
         data: { deleted_at: null }
     });
 };
 
+export const restoreAllByUserId = async (userId) => {
+    return prisma.markdownFile.updateMany({
+        where: { user_id: userId, ...isDeleted },
+        data: { deleted_at: null }
+    });
+};
 
-// ============================================
-// HARD DELETE
-// ============================================
+export const hardDeleteById = async (id, userId) => {
+    // First check if file exists and belongs to user
+    const file = await prisma.markdownFile.findFirst({
+        where: { id, user_id: userId }
+    });
+    if (!file) return null;
 
-/**
- * Hapus markdown file permanen
- * 
- * ⚠️ WARNING: Data tidak bisa dikembalikan!
- * 
- * @param {string} id
- */
-export const hardDelete = async (id) => {
     return prisma.markdownFile.delete({
         where: { id }
     });
 };
 
-/**
- * Hapus semua file milik user (untuk delete account)
- * 
- * @param {string} userId
- */
-export const deleteAllByUserId = async (userId) => {
+export const emptyTrash = async (userId) => {
     return prisma.markdownFile.deleteMany({
-        where: { user_id: userId }
-    });
-};
-
-
-// ============================================
-// COUNT / STATISTICS
-// ============================================
-
-/**
- * Hitung jumlah file milik user
- * 
- * @param {string} userId
- */
-export const countByUserId = async (userId) => {
-    return prisma.markdownFile.count({
-        where: { user_id: userId, ...notDeleted }
+        where: { user_id: userId, ...isDeleted }
     });
 };

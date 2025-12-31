@@ -1,18 +1,6 @@
 import * as markdownRepo from "../repositories/markdown.repository.js";
+import { NotFoundError, BadRequestError, ConflictError } from "../utils/error.util.js";
 
-/**
- * ===========================================
- * MARKDOWN SERVICE
- * ===========================================
- * Business logic untuk Markdown Files.
- */
-
-/**
- * Get all files milik user dengan pagination
- * 
- * @param {string} userId
- * @param {object} query - { page, limit, orderBy, order }
- */
 export const getFiles = async (userId, query = {}) => {
     const page = parseInt(query.page) || 1;
     const limit = parseInt(query.limit) || 10;
@@ -27,13 +15,6 @@ export const getFiles = async (userId, query = {}) => {
     });
 };
 
-/**
- * Search files by title
- * 
- * @param {string} userId
- * @param {string} keyword
- * @param {object} query - { page, limit }
- */
 export const searchFiles = async (userId, keyword, query = {}) => {
     if (!keyword || keyword.trim() === '') {
         return getFiles(userId, query);
@@ -42,39 +23,41 @@ export const searchFiles = async (userId, keyword, query = {}) => {
     const page = parseInt(query.page) || 1;
     const limit = parseInt(query.limit) || 10;
 
-    return markdownRepo.searchByTitle(userId, keyword.trim(), { page, limit });
+    return markdownRepo.search(userId, keyword.trim(), { page, limit });
 };
 
-/**
- * Get single file by ID
- * 
- * @param {string} userId
- * @param {string} fileId
- */
 export const getFileById = async (userId, fileId) => {
-    const file = await markdownRepo.findByIdAndUserId(fileId, userId);
+    const file = await markdownRepo.findById(fileId, userId);
 
     if (!file) {
-        const error = new Error("File tidak ditemukan");
-        error.statusCode = 404;
-        throw error;
+        throw NotFoundError("File tidak ditemukan");
     }
 
     return file;
 };
 
-/**
- * Create new markdown file
- * 
- * @param {string} userId
- * @param {object} data - { title, content }
- */
+export const getFileByIdWithUser = async (userId, fileId) => {
+    const file = await markdownRepo.findByIdWithUser(fileId, userId);
+
+    if (!file) {
+        throw NotFoundError("File tidak ditemukan");
+    }
+
+    return file;
+};
+
+export const getRecentFiles = async (userId, limit = 10) => {
+    return markdownRepo.getRecentByUserId(userId, limit);
+};
+
 export const createFile = async (userId, { title, content }) => {
-    // Validasi
     if (!title || title.trim() === '') {
-        const error = new Error("Title tidak boleh kosong");
-        error.statusCode = 400;
-        throw error;
+        throw BadRequestError("Title tidak boleh kosong");
+    }
+
+    const exists = await markdownRepo.existsByTitle(title.trim(), userId);
+    if (exists) {
+        throw ConflictError("File dengan title ini sudah ada");
     }
 
     return markdownRepo.create({
@@ -84,30 +67,23 @@ export const createFile = async (userId, { title, content }) => {
     });
 };
 
-/**
- * Update markdown file
- * 
- * @param {string} userId
- * @param {string} fileId
- * @param {object} data - { title?, content? }
- */
 export const updateFile = async (userId, fileId, { title, content }) => {
-    // 1. Cek ownership
-    const file = await markdownRepo.findByIdAndUserId(fileId, userId);
+    const file = await markdownRepo.findById(fileId, userId);
     if (!file) {
-        const error = new Error("File tidak ditemukan");
-        error.statusCode = 404;
-        throw error;
+        throw NotFoundError("File tidak ditemukan");
     }
 
-    // 2. Validasi title jika ada
     if (title !== undefined && title.trim() === '') {
-        const error = new Error("Title tidak boleh kosong");
-        error.statusCode = 400;
-        throw error;
+        throw BadRequestError("Title tidak boleh kosong");
     }
 
-    // 3. Update
+    if (title !== undefined) {
+        const exists = await markdownRepo.existsByTitle(title.trim(), userId, fileId);
+        if (exists) {
+            throw ConflictError("File dengan title ini sudah ada");
+        }
+    }
+
     const updateData = {};
     if (title !== undefined) updateData.title = title.trim();
     if (content !== undefined) updateData.content = content;
@@ -115,33 +91,105 @@ export const updateFile = async (userId, fileId, { title, content }) => {
     return markdownRepo.update(fileId, updateData);
 };
 
-/**
- * Delete markdown file (soft delete)
- * 
- * @param {string} userId
- * @param {string} fileId
- */
 export const deleteFile = async (userId, fileId) => {
-    // 1. Cek ownership
-    const file = await markdownRepo.findByIdAndUserId(fileId, userId);
+    const file = await markdownRepo.findById(fileId, userId);
     if (!file) {
-        const error = new Error("File tidak ditemukan");
-        error.statusCode = 404;
-        throw error;
+        throw NotFoundError("File tidak ditemukan");
     }
 
-    // 2. Soft delete
     await markdownRepo.softDelete(fileId);
 
     return { message: "File berhasil dihapus" };
 };
 
-/**
- * Get file count for user
- * 
- * @param {string} userId
- */
+export const bulkDeleteFiles = async (userId, fileIds) => {
+    if (!fileIds || !Array.isArray(fileIds) || fileIds.length === 0) {
+        throw BadRequestError("File IDs tidak boleh kosong");
+    }
+
+    const result = await markdownRepo.bulkSoftDelete(fileIds, userId);
+    return {
+        message: `${result.count} file berhasil dihapus`,
+        count: result.count
+    };
+};
+
 export const getFileCount = async (userId) => {
     const count = await markdownRepo.countByUserId(userId);
     return { count };
+};
+
+export const getDeletedFiles = async (userId, query = {}) => {
+    const page = parseInt(query.page) || 1;
+    const limit = parseInt(query.limit) || 10;
+
+    return markdownRepo.findDeletedByUserId(userId, { page, limit });
+};
+
+export const getDeletedFileCount = async (userId) => {
+    const count = await markdownRepo.countDeletedByUserId(userId);
+    return { count };
+};
+
+export const restoreFile = async (userId, fileId) => {
+    const file = await markdownRepo.findDeletedById(fileId, userId);
+
+    if (!file) {
+        throw NotFoundError("File tidak ditemukan di trash");
+    }
+
+    const exists = await markdownRepo.existsByTitle(file.title, userId);
+    if (exists) {
+        throw ConflictError(
+            `Tidak bisa restore: File dengan title "${file.title}" sudah ada. ` +
+            `Hapus atau rename file tersebut terlebih dahulu.`
+        );
+    }
+
+    return await markdownRepo.restoreById(fileId, userId);
+};
+
+export const restoreAllFiles = async (userId) => {
+    const deletedFiles = await markdownRepo.findDeletedByUserId(userId, {
+        limit: 1000
+    });
+
+    const conflicts = [];
+    for (const file of deletedFiles.data) {
+        const exists = await markdownRepo.existsByTitle(file.title, userId);
+        if (exists) {
+            conflicts.push(file.title);
+        }
+    }
+
+    if (conflicts.length > 0) {
+        throw ConflictError(
+            `Tidak bisa restore semua file. Konflik dengan: ${conflicts.join(', ')}`
+        );
+    }
+
+    const result = await markdownRepo.restoreAllByUserId(userId);
+
+    return {
+        message: `${result.count} file berhasil di-restore`,
+        count: result.count
+    };
+};
+
+export const permanentDeleteFile = async (userId, fileId) => {
+    const file = await markdownRepo.hardDeleteById(fileId, userId);
+
+    if (!file) {
+        throw NotFoundError("File tidak ditemukan");
+    }
+
+    return { message: "File berhasil dihapus permanen" };
+};
+
+export const emptyTrash = async (userId) => {
+    const result = await markdownRepo.emptyTrash(userId);
+    return {
+        message: `${result.count} file berhasil dihapus permanen`,
+        count: result.count
+    };
 };
