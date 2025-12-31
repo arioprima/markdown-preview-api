@@ -12,8 +12,14 @@ export const prisma = new PrismaClient({
 });
 
 export async function connectDB() {
-    await prisma.$connect();
-    console.log("Database connected");
+    try {
+        await prisma.$connect();
+        await prisma.$executeRaw`SELECT 1`;
+        console.log("✅ Database connected");
+    } catch (error) {
+        console.error("❌ Database connection failed:", error.message);
+        process.exit(1);
+    }
 }
 
 export async function disconnectDB() {
