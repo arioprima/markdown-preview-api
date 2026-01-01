@@ -47,6 +47,10 @@ export const login = async (data) => {
         throw UnauthorizedError("Email or password is incorrect");
     }
 
+    if (!user.password) {
+        throw UnauthorizedError("This account was registered using Google. Please login with Google.");
+    }
+
     const isValidPassword = await comparePassword(password, user.password);
 
     if (!isValidPassword) {
