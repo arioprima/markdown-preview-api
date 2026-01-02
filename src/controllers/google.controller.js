@@ -33,7 +33,7 @@ export const handleGoogleCallback = async (req, res, next) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        res.redirect(`${process.env.CLIENT_URL}/auth/callback?isNewUser=${result.isNewUser}`);
+        res.redirect(`${process.env.CLIENT_URL}/callback?isNewUser=${result.isNewUser}`);
     } catch (error) {
         console.error("Google OAuth error:", error);
         res.redirect(
