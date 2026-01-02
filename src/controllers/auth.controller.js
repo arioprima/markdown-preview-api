@@ -20,10 +20,18 @@ export const register = async (req, res, next) => {
 
         const result = await authService.register({ email, username, password });
 
+        // Set JWT di HTTP-only cookie
+        res.cookie('token', result.token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
         res.status(201).json({
             success: true,
             message: "Registration successful",
-            data: result
+            data: { user: result.user }
         });
     } catch (error) {
         next(error);
@@ -43,10 +51,18 @@ export const login = async (req, res, next) => {
 
         const result = await authService.login({ email, password });
 
+        // Set JWT di HTTP-only cookie
+        res.cookie('token', result.token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
         res.status(200).json({
             success: true,
             message: "Login successful",
-            data: result
+            data: { user: result.user }
         });
     } catch (error) {
         next(error);
@@ -125,6 +141,9 @@ export const deleteAccount = async (req, res, next) => {
 
         const result = await authService.deleteAccount(userId);
 
+        // Clear cookie saat delete account
+        res.clearCookie('token');
+
         res.status(200).json({
             success: true,
             message: result.message
@@ -132,4 +151,18 @@ export const deleteAccount = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+};
+
+export const logout = (req, res) => {
+    // Clear HTTP-only cookie
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+    });
+
+    res.status(200).json({
+        success: true,
+        message: "Logged out successfully"
+    });
 };
