@@ -25,7 +25,7 @@ export const handleGoogleCallback = async (req, res, next) => {
         const result = await googleService.handleGoogleLogin(code);
 
         res.redirect(
-            `${process.env.CLIENT_URL}/auth/callback?token=${result.token}&isNewUser=${result.isNewUser}`
+            `${process.env.CLIENT_URL}/callback?token=${result.token}&isNewUser=${result.isNewUser}`
         );
     } catch (error) {
         console.error("Google OAuth error:", error);
