@@ -20,11 +20,12 @@ export const register = async (req, res, next) => {
 
         const result = await authService.register({ email, username, password });
 
-        // Set JWT di HTTP-only cookie
+        // Set cookie dengan domain untuk cross-subdomain
         res.cookie('token', result.token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            secure: true,                          // HTTPS required
+            sameSite: 'none',                      // Cross-origin allowed
+            domain: '.karyacodelab.com',           // Share antar subdomain
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
@@ -51,11 +52,12 @@ export const login = async (req, res, next) => {
 
         const result = await authService.login({ email, password });
 
-        // Set JWT di HTTP-only cookie
+        // Set cookie dengan domain untuk cross-subdomain
         res.cookie('token', result.token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            secure: true,                          // HTTPS required
+            sameSite: 'none',                      // Cross-origin allowed
+            domain: '.karyacodelab.com',           // Share antar subdomain
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
@@ -142,7 +144,12 @@ export const deleteAccount = async (req, res, next) => {
         const result = await authService.deleteAccount(userId);
 
         // Clear cookie saat delete account
-        res.clearCookie('token');
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            domain: '.karyacodelab.com'
+        });
 
         res.status(200).json({
             success: true,
@@ -157,8 +164,9 @@ export const logout = (req, res) => {
     // Clear HTTP-only cookie
     res.clearCookie('token', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
+        secure: true,
+        sameSite: 'none',
+        domain: '.karyacodelab.com'
     });
 
     res.status(200).json({

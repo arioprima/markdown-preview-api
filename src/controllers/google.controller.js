@@ -24,14 +24,16 @@ export const handleGoogleCallback = async (req, res, next) => {
 
         const result = await googleService.handleGoogleLogin(code);
 
+        // Set cookie dengan domain untuk cross-subdomain
         res.cookie('token', result.token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            secure: true,                          // HTTPS required
+            sameSite: 'none',                      // Cross-origin allowed
+            domain: '.karyacodelab.com',           // Share antar subdomain
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        res.redirect(`${process.env.CLIENT_URL}/callback?isNewUser=${result.isNewUser}`);
+        res.redirect(`${process.env.CLIENT_URL}/auth/callback?isNewUser=${result.isNewUser}`);
     } catch (error) {
         console.error("Google OAuth error:", error);
         res.redirect(
