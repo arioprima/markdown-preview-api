@@ -7,3 +7,13 @@ export const GOOGLE_OAUTH = {
         "https://www.googleapis.com/auth/userinfo.profile",
     ],
 };
+
+export const GITHUB_OAUTH = {
+    AUTH_URL: "https://github.com/login/oauth/authorize",
+    TOKEN_URL: "https://github.com/login/oauth/access_token",
+    USERINFO_URL: "https://api.github.com/user",
+    SCOPES: [
+        "user:email",
+        "read:user",
+    ],
+};

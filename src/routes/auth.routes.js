@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as authController from "../controllers/auth.controller.js";
 import * as googleController from "../controllers/google.controller.js"
+import * as githubController from "../controllers/github.controller.js"
 import { authenticate } from "../middlewares/auth.middleware.js";
 
 const router = Router();
@@ -11,6 +12,10 @@ router.post("/login", authController.login);
 // Google OAuth routes
 router.get("/google", googleController.redirectToGoogle);
 router.get("/google/callback", googleController.handleGoogleCallback);
+
+// GitHub OAuth routes
+router.get("/github", githubController.redirectToGithub);
+router.get("/github/callback", githubController.handleGithubCallback);
 
 // Protected routes
 router.get("/profile", authenticate, authController.getProfile);
