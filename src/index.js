@@ -4,6 +4,7 @@ import { env } from "./config/env.js";
 import { connectDB, disconnectDB, prisma } from "./config/database.js";
 import routes from "./routes/index.js";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
+import cookieParser from 'cookie-parser';
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(cors({
     origin: env.CLIENT_URL,
     credentials: true
 }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

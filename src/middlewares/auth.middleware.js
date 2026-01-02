@@ -5,14 +5,17 @@ export const authenticate = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
 
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        // Cek dari header Authorization ATAU cookie
+        const token = authHeader?.startsWith("Bearer ")
+            ? authHeader.split(" ")[1]
+            : req.cookies?.token;
+
+        if (!token) {
             return res.status(401).json({
                 success: false,
                 message: "Token not found"
             });
         }
-
-        const token = authHeader.split(" ")[1];
 
         const decoded = jwt.verify(token, env.JWT_SECRET);
 
@@ -42,18 +45,21 @@ export const authenticate = async (req, res, next) => {
 
 /**
  * Optional auth - tidak error jika tidak ada token
- * Berguna untuk endpoint yang bisa diakses public tapi punya fitur tambahan jika login
  */
 export const optionalAuth = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
 
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        // Cek dari header Authorization ATAU cookie
+        const token = authHeader?.startsWith("Bearer ")
+            ? authHeader.split(" ")[1]
+            : req.cookies?.token;
+
+        if (!token) {
             req.user = null;
             return next();
         }
 
-        const token = authHeader.split(" ")[1];
         const decoded = jwt.verify(token, env.JWT_SECRET);
 
         req.user = {
