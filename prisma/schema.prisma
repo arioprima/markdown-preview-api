@@ -17,21 +17,21 @@ model User {
   updated_at DateTime  @updatedAt
   deleted_at DateTime?
 
-  files MarkdownFile[]
-  accounts Account[]   
+  files      MarkdownFile[]
+  accounts   Account[]
+  groupNotes GroupNote[]
 
   @@map("users")
 }
 
-
 model Account {
-  id              String   @id @default(uuid())
-  user_id         String
-  provider        String  
-  provider_id     String  
-  access_token    String?  
-  refresh_token   String?  
-  created_at      DateTime @default(now())
+  id            String   @id @default(uuid())
+  user_id       String
+  provider      String
+  provider_id   String
+  access_token  String?
+  refresh_token String?
+  created_at    DateTime @default(now())
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -45,12 +45,29 @@ model MarkdownFile {
   title      String
   content    String    @db.Text
   user_id    String
+  group_id   String?
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
   deleted_at DateTime?
 
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  group GroupNote? @relation(fields: [group_id], references: [id])
 
   @@index([user_id])
   @@map("markdown_files")
+}
+
+model GroupNote {
+  id            String         @id @default(uuid())
+  name          String
+  user_id       String
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+  deleted_at    DateTime?
+  markdownFiles MarkdownFile[]
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("group_notes")
 }
