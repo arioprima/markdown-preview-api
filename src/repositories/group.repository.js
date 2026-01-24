@@ -6,12 +6,13 @@ import {
 
 const notDeleted = { deleted_at: null };
 
-export const findById = async (id) => {
-  if (!id) return null;
+export const findByIdAndUserId = async (id, userId) => {
+  if (!id || !userId) return null;
 
   return prisma.groupNote.findFirst({
     where: {
-      id: id,
+      id,
+      user_id: userId,
       ...notDeleted,
     },
     include: {
@@ -43,6 +44,19 @@ export const findByUserId = async (userId, options = {}) => {
   ]);
 
   return paginatedResponse(data, count, { page, limit });
+};
+
+export const existsByName = async (name, userId, excludeId = null) => {
+  const where = {
+    name,
+    user_id: userId,
+    ...notDeleted,
+    ...(excludeId && { id: { not: excludeId } }),
+  };
+
+  const count = await prisma.groupNote.count({ where });
+
+  return count > 0;
 };
 
 export const create = async (data) => {
@@ -82,21 +96,6 @@ export const softDelete = async (id) => {
     },
     data: {
       deleted_at: new Date(),
-    },
-  });
-};
-
-export const findByIdAndUserId = async (id, userId) => {
-  if (!id || !userId) return null;
-
-  return prisma.groupNote.findFirst({
-    where: {
-      id,
-      user_id: userId,
-      ...notDeleted,
-    },
-    include: {
-      markdownFiles: true,
     },
   });
 };
