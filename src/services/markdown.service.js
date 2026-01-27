@@ -10,12 +10,14 @@ export const getFiles = async (userId, query = {}) => {
   const limit = parseInt(query.limit) || 10;
   const orderBy = query.orderBy || "created_at";
   const order = query.order || "desc";
+  const ungrouped = query.ungrouped || false;
 
   return markdownRepo.findManyByUserId(userId, {
     page,
     limit,
     orderBy,
     order,
+    ungrouped,
   });
 };
 
@@ -100,7 +102,11 @@ export const updateFile = async (
   const updateData = {};
   if (title !== undefined) updateData.title = title.trim();
   if (content !== undefined) updateData.content = content;
-  if (group_id !== undefined) updateData.group_id = group_id;
+  // Handle group_id: empty string or "null" means remove from group
+  if (group_id !== undefined) {
+    updateData.group_id =
+      group_id === "" || group_id === "null" ? null : group_id;
+  }
 
   return markdownRepo.update(fileId, updateData);
 };

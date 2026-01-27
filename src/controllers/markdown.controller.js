@@ -3,7 +3,7 @@ import * as markdownService from "../services/markdown.service.js";
 export const getFiles = async (req, res, next) => {
   try {
     const userId = req.user.userId;
-    const { page, limit, orderBy, order, search } = req.query;
+    const { page, limit, orderBy, order, search, ungrouped } = req.query;
 
     let result;
     if (search) {
@@ -17,6 +17,7 @@ export const getFiles = async (req, res, next) => {
         limit,
         orderBy,
         order,
+        ungrouped: ungrouped === "true",
       });
     }
 

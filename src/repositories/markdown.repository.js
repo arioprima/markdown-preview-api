@@ -31,8 +31,13 @@ export const findByIdWithUser = async (id, userId) => {
 
 export const findManyByUserId = async (userId, options = {}) => {
   const { page, limit, skip, orderBy, order } = parsePaginationOptions(options);
+  const { ungrouped } = options;
 
-  const where = { user_id: userId, ...notDeleted };
+  const where = {
+    user_id: userId,
+    ...notDeleted,
+    ...(ungrouped && { group_id: null }),
+  };
 
   const [data, total] = await Promise.all([
     prisma.markdownFile.findMany({
