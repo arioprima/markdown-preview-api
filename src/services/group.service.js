@@ -8,12 +8,14 @@ import {
 export const getGroups = async (userId, query = {}) => {
   const page = parseInt(query.page) || 1;
   const limit = parseInt(query.limit) || 10;
+  const search = query.search?.trim() || null;
 
   return groupRepository.findByUserId(userId, {
     page,
     limit,
     orderBy: "created_at",
     order: "desc",
+    search,
   });
 };
 

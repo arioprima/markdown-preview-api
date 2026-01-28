@@ -3,9 +3,9 @@ import * as groupService from "../services/group.service.js";
 export const getGroups = async (req, res, next) => {
   try {
     const userId = req.user.userId;
-    const { page, limit } = req.query;
+    const { page, limit, search } = req.query;
 
-    const result = await groupService.getGroups(userId, { page, limit });
+    const result = await groupService.getGroups(userId, { page, limit, search });
 
     res.status(200).json({
       success: true,

@@ -3,13 +3,15 @@ import * as markdownService from "../services/markdown.service.js";
 export const getFiles = async (req, res, next) => {
   try {
     const userId = req.user.userId;
-    const { page, limit, orderBy, order, search, ungrouped } = req.query;
+    const { page, limit, orderBy, order, search, ungrouped, group_id } = req.query;
 
     let result;
     if (search) {
       result = await markdownService.searchFiles(userId, search, {
         page,
         limit,
+        group_id,
+        ungrouped: ungrouped === "true",
       });
     } else {
       result = await markdownService.getFiles(userId, {
@@ -18,6 +20,7 @@ export const getFiles = async (req, res, next) => {
         orderBy,
         order,
         ungrouped: ungrouped === "true",
+        group_id,
       });
     }
 

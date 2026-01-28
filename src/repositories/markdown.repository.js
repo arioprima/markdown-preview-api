@@ -31,12 +31,14 @@ export const findByIdWithUser = async (id, userId) => {
 
 export const findManyByUserId = async (userId, options = {}) => {
   const { page, limit, skip, orderBy, order } = parsePaginationOptions(options);
-  const { ungrouped } = options;
+  const { ungrouped, group_id } = options;
 
   const where = {
     user_id: userId,
     ...notDeleted,
-    ...(ungrouped && { group_id: null }),
+    // Filter: group_id spesifik ATAU ungrouped (null) ATAU semua
+    ...(group_id && { group_id }),
+    ...(ungrouped && !group_id && { group_id: null }),
   };
 
   const [data, total] = await Promise.all([
@@ -54,6 +56,7 @@ export const findManyByUserId = async (userId, options = {}) => {
 
 export const search = async (userId, keyword, options = {}) => {
   const { page, limit, skip } = parsePaginationOptions(options);
+  const { group_id, ungrouped } = options;
 
   const where = {
     user_id: userId,
@@ -62,6 +65,9 @@ export const search = async (userId, keyword, options = {}) => {
       { title: { contains: keyword, mode: "insensitive" } },
       { content: { contains: keyword, mode: "insensitive" } },
     ],
+    // Filter berdasarkan grup
+    ...(group_id && { group_id }),
+    ...(ungrouped && !group_id && { group_id: null }),
   };
 
   const [data, total] = await Promise.all([
@@ -70,6 +76,11 @@ export const search = async (userId, keyword, options = {}) => {
       orderBy: { updated_at: "desc" },
       take: limit,
       skip,
+      include: {
+        group: {
+          select: { id: true, name: true },
+        },
+      },
     }),
     prisma.markdownFile.count({ where }),
   ]);

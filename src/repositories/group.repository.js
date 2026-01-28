@@ -16,7 +16,10 @@ export const findByIdAndUserId = async (id, userId) => {
       ...notDeleted,
     },
     include: {
-      markdownFiles: true,
+      markdownFiles: {
+        where: { deleted_at: null },
+        orderBy: { updated_at: "desc" },
+      },
     },
   });
 };
@@ -24,10 +27,15 @@ export const findByIdAndUserId = async (id, userId) => {
 export const findByUserId = async (userId, options = {}) => {
   if (!userId) return null;
   const { page, limit, skip, orderBy, order } = parsePaginationOptions(options);
+  const { search } = options;
 
   const where = {
     user_id: userId,
     ...notDeleted,
+    // Search by group name
+    ...(search && {
+      name: { contains: search, mode: "insensitive" },
+    }),
   };
 
   const [data, count] = await Promise.all([
@@ -37,7 +45,10 @@ export const findByUserId = async (userId, options = {}) => {
       take: limit,
       skip,
       include: {
-        markdownFiles: true,
+        markdownFiles: {
+          where: { deleted_at: null },
+          orderBy: { updated_at: "desc" },
+        },
       },
     }),
     prisma.groupNote.count({ where }),

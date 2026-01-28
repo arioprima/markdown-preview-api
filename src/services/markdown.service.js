@@ -11,6 +11,7 @@ export const getFiles = async (userId, query = {}) => {
   const orderBy = query.orderBy || "created_at";
   const order = query.order || "desc";
   const ungrouped = query.ungrouped || false;
+  const group_id = query.group_id;
 
   return markdownRepo.findManyByUserId(userId, {
     page,
@@ -18,6 +19,7 @@ export const getFiles = async (userId, query = {}) => {
     orderBy,
     order,
     ungrouped,
+    group_id,
   });
 };
 
@@ -28,8 +30,15 @@ export const searchFiles = async (userId, keyword, query = {}) => {
 
   const page = parseInt(query.page) || 1;
   const limit = parseInt(query.limit) || 10;
+  const group_id = query.group_id;
+  const ungrouped = query.ungrouped || false;
 
-  return markdownRepo.search(userId, keyword.trim(), { page, limit });
+  return markdownRepo.search(userId, keyword.trim(), {
+    page,
+    limit,
+    group_id,
+    ungrouped,
+  });
 };
 
 export const getFileById = async (userId, fileId) => {
@@ -162,7 +171,7 @@ export const restoreFile = async (userId, fileId) => {
   if (exists) {
     throw ConflictError(
       `Tidak bisa restore: File dengan title "${file.title}" sudah ada. ` +
-        `Hapus atau rename file tersebut terlebih dahulu.`,
+      `Hapus atau rename file tersebut terlebih dahulu.`,
     );
   }
 
