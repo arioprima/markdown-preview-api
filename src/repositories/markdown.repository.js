@@ -29,6 +29,23 @@ export const findByIdWithUser = async (id, userId) => {
   });
 };
 
+// Cari file publik berdasarkan share token (untuk akses tanpa login).
+// Hanya kembalikan field yang aman dipublikasikan.
+export const findByShareToken = async (token) => {
+  return prisma.markdownFile.findFirst({
+    where: { share_token: token, is_public: true, ...notDeleted },
+    select: {
+      title: true,
+      content: true,
+      created_at: true,
+      updated_at: true,
+      user: {
+        select: { username: true },
+      },
+    },
+  });
+};
+
 export const findManyByUserId = async (userId, options = {}) => {
   const { page, limit, skip, orderBy, order } = parsePaginationOptions(options);
   const { ungrouped, group_id } = options;

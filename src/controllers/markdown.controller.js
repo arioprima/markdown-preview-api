@@ -278,3 +278,74 @@ export const createFile = async (req, res, next) => {
     next(error);
   }
 };
+
+// ============ SHARE ============
+
+// GET /api/files/:id/share - cek status share (butuh auth)
+export const getShareStatus = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+
+    const result = await markdownService.getShareStatus(userId, id);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/files/:id/share - aktifkan tautan publik (butuh auth)
+export const enableShare = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+
+    const result = await markdownService.enableShare(userId, id);
+
+    res.status(200).json({
+      success: true,
+      message: "Tautan publik diaktifkan",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// DELETE /api/files/:id/share - nonaktifkan tautan publik (butuh auth)
+export const disableShare = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+
+    const result = await markdownService.disableShare(userId, id);
+
+    res.status(200).json({
+      success: true,
+      message: "Tautan publik dinonaktifkan",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/shared/:token - ambil dokumen publik (TANPA auth)
+export const getSharedFile = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+
+    const file = await markdownService.getSharedByToken(token);
+
+    res.status(200).json({
+      success: true,
+      data: file,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

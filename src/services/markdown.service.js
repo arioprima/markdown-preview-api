@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import * as markdownRepo from "../repositories/markdown.repository.js";
 import {
   NotFoundError,
@@ -220,5 +221,70 @@ export const emptyTrash = async (userId) => {
   return {
     message: `${result.count} file berhasil dihapus permanen`,
     count: result.count,
+  };
+};
+
+// ============ SHARE ============
+
+// Token URL-safe & sulit ditebak (~22 karakter)
+const generateShareToken = () => randomBytes(16).toString("base64url");
+
+export const enableShare = async (userId, fileId) => {
+  const file = await markdownRepo.findById(fileId, userId);
+  if (!file) {
+    throw NotFoundError("File tidak ditemukan");
+  }
+
+  // Pakai token lama bila masih ada, kalau tidak buat baru
+  const token = file.share_token || generateShareToken();
+
+  await markdownRepo.update(fileId, {
+    is_public: true,
+    share_token: token,
+  });
+
+  return { is_public: true, token };
+};
+
+export const disableShare = async (userId, fileId) => {
+  const file = await markdownRepo.findById(fileId, userId);
+  if (!file) {
+    throw NotFoundError("File tidak ditemukan");
+  }
+
+  // Cabut total: matikan publik & hapus token (link lama jadi mati)
+  await markdownRepo.update(fileId, {
+    is_public: false,
+    share_token: null,
+  });
+
+  return { is_public: false, token: null };
+};
+
+export const getShareStatus = async (userId, fileId) => {
+  const file = await markdownRepo.findById(fileId, userId);
+  if (!file) {
+    throw NotFoundError("File tidak ditemukan");
+  }
+
+  return {
+    is_public: file.is_public,
+    token: file.is_public ? file.share_token : null,
+  };
+};
+
+export const getSharedByToken = async (token) => {
+  const file = await markdownRepo.findByShareToken(token);
+  if (!file) {
+    // 404 (bukan 401) agar halaman publik tidak redirect ke login
+    throw NotFoundError("Dokumen tidak ditemukan atau berbagi telah dinonaktifkan");
+  }
+
+  return {
+    title: file.title,
+    content: file.content,
+    username: file.user?.username,
+    created_at: file.created_at,
+    updated_at: file.updated_at,
   };
 };

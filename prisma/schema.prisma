@@ -41,14 +41,16 @@ model Account {
 }
 
 model MarkdownFile {
-  id         String    @id @default(uuid())
-  title      String
-  content    String    @db.Text
-  user_id    String
-  group_id   String?
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-  deleted_at DateTime?
+  id          String    @id @default(uuid())
+  title       String
+  content     String    @db.Text
+  user_id     String
+  group_id    String?
+  is_public   Boolean   @default(false)
+  share_token String?   @unique
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  deleted_at  DateTime?
 
   user  User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
   group GroupNote? @relation(fields: [group_id], references: [id])

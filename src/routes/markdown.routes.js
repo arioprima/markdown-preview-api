@@ -49,6 +49,12 @@ router.delete("/trash", markdownController.emptyTrash);
 router.get("/", markdownController.getFiles);
 router.get("/count", markdownController.getFileCount);
 router.get("/recent", markdownController.getRecentFiles);
+
+// Share routes (butuh auth) - di atas /:id agar tidak tertangkap
+router.get("/:id/share", markdownController.getShareStatus);
+router.post("/:id/share", markdownController.enableShare);
+router.delete("/:id/share", markdownController.disableShare);
+
 router.get("/:id", markdownController.getFileById);
 
 // Create & Update - pakai raw text body (konsisten!)
